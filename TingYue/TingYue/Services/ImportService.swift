@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import SwiftData
 import UniformTypeIdentifiers
 
 /// 文档导入：文件选择器 / 外部「用听阅打开」

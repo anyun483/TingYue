@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import UIKit
 
 /// TTS 统一封装：火山引擎豆包音色（在线）+ 系统离线兜底
 final class TTSManager: NSObject, ObservableObject {

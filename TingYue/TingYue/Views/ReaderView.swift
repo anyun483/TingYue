@@ -16,16 +16,13 @@ struct ReaderView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 10) {
                     ForEach(sentences.indices, id: \.self) { i in
-                        Text(sentences[i])
-                            .font(.system(size: fontSize))
-                            .padding(.horizontal, 4)
-                            .background(
-                                (i == player.currentIndex && player.isPlaying)
-                                    ? Color.orange.opacity(0.25) : Color.clear)
-                            .cornerRadius(6)
+                        SentenceRow(text: sentences[i],
+                                    isCurrent: i == player.currentIndex && player.isPlaying,
+                                    fontSize: fontSize)
                             .id(i)
                             .onTapGesture {
-                                player.startReading(book: book, text: sentences.joined(separator: "\n"),
+                                player.startReading(book: book,
+                                                    text: sentences.joined(separator: "\n"),
                                                     fromIndex: i)
                                 withAnimation { proxy.scrollTo(i, anchor: .center) }
                             }
@@ -98,6 +95,21 @@ struct ReaderView: View {
             acc += s.count
         }
         return nil
+    }
+}
+
+/// 单句视图（拆分以避免整棵 View 树类型检查超时）
+struct SentenceRow: View {
+    let text: String
+    let isCurrent: Bool
+    let fontSize: Double
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: fontSize))
+            .padding(.horizontal, 4)
+            .background(isCurrent ? Color.orange.opacity(0.25) : Color.clear)
+            .cornerRadius(6)
     }
 }
 

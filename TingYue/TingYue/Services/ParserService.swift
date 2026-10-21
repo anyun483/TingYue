@@ -59,13 +59,11 @@ enum ParserService {
         var slides: [(Int, String)] = []
         for entry in archive where
             entry.path.hasPrefix("ppt/slides/slide") && entry.path.hasSuffix(".xml") {
-            let num = entry.path
+            let numStr = entry.path
                 .replacingOccurrences(of: "ppt/slides/slide", with: "")
                 .replacingOccurrences(of: ".xml", with: "")
-                .compactMap { $0.wholeNumberValue } ?? 0
-            var data = Data()
-            _ = try archive.extract(entry, into: &data)
-            let xml = String(data: data, encoding: .utf8) ?? ""
+            let num = Int(numStr) ?? 0
+            let xml = try extractEntry(archive, entry)
             let text = extractTaggedText(xml: xml, tag: "a:t", joinNewlineTag: "a:p")
             if !text.isEmpty { slides.append((num, text)) }
         }
@@ -88,8 +86,20 @@ enum ParserService {
               let entry = archive.first(where: { $0.path == entryPath }) else {
             throw ParseError.cannotOpen
         }
+        let xml = try extractEntry(archive, entry)
+        return xml
+    }
+
+    /// 兼容 ZIPFoundation 新旧 API：优先 consumer 闭包，失败回退 into
+    private static func extractEntry(_ archive: Archive, _ entry: Entry) throws -> String {
         var data = Data()
-        _ = try archive.extract(entry, into: &data)
+        do {
+            _ = try archive.extract(entry) { chunk in data.append(chunk) }
+        } catch {
+            // 旧 API（0.9.16 之前）
+            data = Data()
+            _ = try archive.extract(entry, into: &data)
+        }
         return String(data: data, encoding: .utf8) ?? ""
     }
 

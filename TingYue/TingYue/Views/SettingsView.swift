@@ -12,49 +12,10 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    Toggle("优先使用豆包在线音色", isOn: $useOnline)
-                    if useOnline {
-                        TextField("火山引擎 App ID", text: $appID)
-                            .autocorrectionDisabled().textInputAutocapitalization(.never)
-                        SecureField("Access Token", text: $token)
-                            .autocorrectionDisabled().textInputAutocapitalization(.never)
-                        HStack {
-                            TextField("试听文本", text: $testText)
-                            Button("试听") { testVoice() }
-                                .buttonStyle(.borderedProminent).disabled(appID.isEmpty || token.isEmpty)
-                        }
-                        if let err = tts.lastError {
-                            Text("上次在线合成失败：\(err)（已自动用系统音色）")
-                                .font(.caption).foregroundStyle(.red)
-                        }
-                    }
-                } header: {
-                    Text("豆包音色（火山引擎语音合成）")
-                } footer: {
-                    Text("火山引擎控制台 → 语音技术 → 语音合成大模型，获取 App ID 与 Access Token。个人实名后每月有免费额度；不配置则自动使用 iPhone 系统离语音色。")
-                }
-
-                Section("音色") {
-                    Picker("在线音色", selection: $player.voice) {
-                        ForEach(TTSManager.onlineVoices) { v in
-                            Text(v.name).tag(v)
-                        }
-                    }
-                }
-
-                Section {
-                    Slider(value: Binding(get: { player.speed },
-                                          set: { player.speed = $0 }),
-                           in: 0.5...2.0, step: 0.1)
-                    Text("默认语速 \(String(format: "%.1f", player.speed))x")
-                        .font(.footnote).foregroundStyle(.secondary)
-                } header: { Text("语速") }
-
-                Section("关于") {
-                    LabeledContent("版本", value: "1.0.0")
-                    LabeledContent("支持格式", value: "TXT / PDF / Word / PPT / Markdown")
-                }
+                dubaoSection
+                voiceSection
+                speedSection
+                aboutSection
             }
             .navigationTitle("设置")
             .onChange(of: appID) { tts.volcanoAppID = $0 }
@@ -63,6 +24,59 @@ struct SettingsView: View {
             .onAppear {
                 player.speed = UserDefaults.standard.object(forKey: "read_speed") as? Double ?? 1.0
             }
+        }
+    }
+
+    // MARK: - 分节拆分（避免类型检查超时）
+    @ViewBuilder private var dubaoSection: some View {
+        Section {
+            Toggle("优先使用豆包在线音色", isOn: $useOnline)
+            if useOnline {
+                TextField("火山引擎 App ID", text: $appID)
+                    .autocorrectionDisabled().textInputAutocapitalization(.never)
+                SecureField("Access Token", text: $token)
+                    .autocorrectionDisabled().textInputAutocapitalization(.never)
+                HStack {
+                    TextField("试听文本", text: $testText)
+                    Button("试听") { testVoice() }
+                        .buttonStyle(.borderedProminent).disabled(appID.isEmpty || token.isEmpty)
+                }
+                if let err = tts.lastError {
+                    Text("上次在线合成失败：\(err)（已自动用系统音色）")
+                        .font(.caption).foregroundStyle(.red)
+                }
+            }
+        } header: {
+            Text("豆包音色（火山引擎语音合成）")
+        } footer: {
+            Text("火山引擎控制台 → 语音技术 → 语音合成大模型，获取 App ID 与 Access Token。个人实名后每月有免费额度；不配置则自动使用 iPhone 系统离语音色。")
+        }
+    }
+
+    private var voiceSection: some View {
+        Section("音色") {
+            Picker("在线音色", selection: $player.voice) {
+                ForEach(TTSManager.onlineVoices) { v in
+                    Text(v.name).tag(v)
+                }
+            }
+        }
+    }
+
+    private var speedSection: some View {
+        Section("语速") {
+            Slider(value: Binding(get: { player.speed },
+                                  set: { player.speed = $0 }),
+                   in: 0.5...2.0, step: 0.1)
+            Text("默认语速 \(String(format: "%.1f", player.speed))x")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
+    }
+
+    private var aboutSection: some View {
+        Section("关于") {
+            LabeledContent("版本", value: "1.0.0")
+            LabeledContent("支持格式", value: "TXT / PDF / Word / PPT / Markdown")
         }
     }
 
