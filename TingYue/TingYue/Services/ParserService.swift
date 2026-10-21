@@ -90,16 +90,10 @@ enum ParserService {
         return xml
     }
 
-    /// 兼容 ZIPFoundation 新旧 API：优先 consumer 闭包，失败回退 into
+    /// ZIPFoundation consumer API
     private static func extractEntry(_ archive: Archive, _ entry: Entry) throws -> String {
         var data = Data()
-        do {
-            _ = try archive.extract(entry) { chunk in data.append(chunk) }
-        } catch {
-            // 旧 API（0.9.16 之前）
-            data = Data()
-            _ = try archive.extract(entry, into: &data)
-        }
+        _ = try archive.extract(entry) { chunk in data.append(chunk) }
         return String(data: data, encoding: .utf8) ?? ""
     }
 

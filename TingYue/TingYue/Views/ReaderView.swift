@@ -12,74 +12,95 @@ struct ReaderView: View {
     @State private var followCancellable: AnyCancellable?
 
     var body: some View {
+        readerContent
+            .navigationTitle(book.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { readerToolbar }
+            .sheet(isPresented: $showSettings) { settingsSheet }
+    }
+
+    // MARK: - 拆分为小视图，避免类型检查超时
+    private var readerContent: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 10) {
                     ForEach(sentences.indices, id: \.self) { i in
-                        SentenceRow(text: sentences[i],
-                                    isCurrent: i == player.currentIndex && player.isPlaying,
-                                    fontSize: fontSize)
+                        sentenceRow(i)
                             .id(i)
-                            .onTapGesture {
-                                player.startReading(book: book,
-                                                    text: sentences.joined(separator: "\n"),
-                                                    fromIndex: i)
-                                withAnimation { proxy.scrollTo(i, anchor: .center) }
-                            }
+                            .onTapGesture { tapSentence(i, proxy: proxy) }
                     }
                 }
                 .padding()
             }
             .background(nightMode ? Color(red: 0.11, green: 0.11, blue: 0.12) : Color(.systemBackground))
             .preferredColorScheme(nightMode ? .dark : nil)
-            .onAppear {
-                if sentences.isEmpty {
-                    sentences = loadSentences()
-                    // 恢复进度
-                    if book.charIndex > 0, let idx = indexForCharOffset(book.charIndex) {
-                        player.startReading(book: book,
-                                            text: sentences.joined(separator: "\n"),
-                                            fromIndex: idx)
-                        player.pause()
-                        proxy.scrollTo(idx, anchor: .center)
-                    }
-                }
-                followCancellable = player.$currentIndex
-                    .receive(on: DispatchQueue.main)
-                    .sink { i in
-                        guard player.isPlaying else { return }
-                        withAnimation { proxy.scrollTo(i, anchor: .center) }
-                    }
+            .onAppear { onAppear(proxy: proxy) }
+        }
+    }
+
+    private func sentenceRow(_ i: Int) -> some View {
+        SentenceRow(text: sentences[i],
+                    isCurrent: i == player.currentIndex && player.isPlaying,
+                    fontSize: fontSize)
+    }
+
+    private func tapSentence(_ i: Int, proxy: ScrollViewProxy) {
+        player.startReading(book: book,
+                            text: sentences.joined(separator: "\n"),
+                            fromIndex: i)
+        withAnimation { proxy.scrollTo(i, anchor: .center) }
+    }
+
+    private func onAppear(proxy: ScrollViewProxy) {
+        if sentences.isEmpty {
+            sentences = loadSentences()
+            if book.charIndex > 0, let idx = indexForCharOffset(book.charIndex) {
+                player.startReading(book: book,
+                                    text: sentences.joined(separator: "\n"),
+                                    fromIndex: idx)
+                player.pause()
+                proxy.scrollTo(idx, anchor: .center)
             }
         }
-        .navigationTitle(book.title)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItemGroup(placement: .bottomBar) {
-                Button { player.previous() } label: { Image(systemName: "backward.end") }
-                Button { player.togglePlay() } label: {
-                    Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.title)
-                }
-                Button { player.next() } label: { Image(systemName: "forward.end") }
-                Spacer()
-                Menu {
-                    Picker("音色", selection: $player.voice) {
-                        ForEach(TTSManager.onlineVoices) { v in
-                            Text(v.name + "（豆包）").tag(v)
-                        }
-                    }
-                    Text("未配置豆包时自动使用系统离线音色").font(.caption)
-                } label: { Image(systemName: "person.wave.2") }
-                Button { showSettings = true } label: { Image(systemName: "textformat") }
+        followCancellable = player.$currentIndex
+            .receive(on: DispatchQueue.main)
+            .sink { i in
+                guard player.isPlaying else { return }
+                withAnimation { proxy.scrollTo(i, anchor: .center) }
             }
+    }
+
+    @ToolbarContentBuilder
+    private var readerToolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: .bottomBar) {
+            Button { player.previous() } label: { Image(systemName: "backward.end") }
+            Button { player.togglePlay() } label: {
+                Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                    .font(.title)
+            }
+            Button { player.next() } label: { Image(systemName: "forward.end") }
+            Spacer()
+            voiceMenu
+            Button { showSettings = true } label: { Image(systemName: "textformat") }
         }
-        .sheet(isPresented: $showSettings) {
-            ReaderSettingsSheet(fontSize: $fontSize, nightMode: $nightMode,
-                                speed: Binding(get: { player.speed },
-                                               set: { player.speed = $0 }))
-                .presentationDetents([.height(300)])
-        }
+    }
+
+    private var voiceMenu: some View {
+        Menu {
+            Picker("音色", selection: $player.voice) {
+                ForEach(TTSManager.onlineVoices) { v in
+                    Text(v.name + "（豆包）").tag(v)
+                }
+            }
+            Text("未配置豆包时自动使用系统离线音色").font(.caption)
+        } label: { Image(systemName: "person.wave.2") }
+    }
+
+    private var settingsSheet: some View {
+        ReaderSettingsSheet(fontSize: $fontSize, nightMode: $nightMode,
+                            speed: Binding(get: { player.speed },
+                                           set: { player.speed = $0 }))
+            .presentationDetents([.height(300)])
     }
 
     private func loadSentences() -> [String] {

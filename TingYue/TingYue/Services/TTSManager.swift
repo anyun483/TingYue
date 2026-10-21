@@ -7,7 +7,7 @@ final class TTSManager: NSObject, ObservableObject {
     static let shared = TTSManager()
 
     // MARK: - 音色定义
-    struct Voice: Identifiable, Codable {
+    struct Voice: Identifiable, Hashable, Codable {
         let id: String            // 火山 voice_type 或系统 voice identifier
         let name: String
         let isOnline: Bool
