@@ -1,0 +1,4 @@
+.workbuddy/
+*.xcarchive/
+build/
+.DS_Store

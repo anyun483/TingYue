@@ -1,0 +1,43 @@
+name: build-ipa
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}   # 支持手动触发
+
+jobs:
+  build:
+    runs-on: macos-14      # 云端 macOS，自带 Xcode
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 安装 XcodeGen
+        run: brew install xcodegen
+
+      - name: 生成 Xcode 工程
+        run: |
+          cd TingYue
+          xcodegen generate
+          ls TingYue.xcodeproj
+
+      - name: 编译（免签名 Archive）
+        run: |
+          xcodebuild archive \
+            -project TingYue/TingYue.xcodeproj \
+            -scheme TingYue \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/TingYue.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+
+      - name: 打包未签名 IPA
+        run: |
+          mkdir -p build/Payload
+          cp -r build/TingYue.xcarchive/Products/Applications/TingYue.app build/Payload/
+          cd build && zip -r TingYue-unsigned.ipa Payload
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: TingYue-unsigned-ipa
+          path: build/TingYue-unsigned.ipa

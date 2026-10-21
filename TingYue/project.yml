@@ -1,0 +1,60 @@
+name: TingYue
+options:
+  bundleIdPrefix: com.anyun
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation
+    from: 0.9.0
+
+targets:
+  TingYue:
+    type: application
+    platform: iOS
+    scheme: {}                # 生成共享 scheme，供 CI xcodebuild 使用
+    sources:
+      - path: TingYue
+    dependencies:
+      - package: ZIPFoundation
+    settings:
+      base:
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1"          # iPhone
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGNING_ALLOWED: "NO"           # 云端无证书，出未签名包，本地 Sideloadly 重签
+        PRODUCT_BUNDLE_IDENTIFIER: com.anyun.tingyue
+    info:
+      path: TingYue/Info.plist
+      properties:
+        CFBundleDisplayName: 听阅
+        UILaunchScreen: {}                   # 生成默认启动屏
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UIBackgroundModes: [audio]           # 听书锁屏继续播
+        LSSupportsOpeningDocumentsInPlace: false
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Plain Text
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [public.plain-text]
+          - CFBundleTypeName: PDF
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [com.adobe.pdf]
+          - CFBundleTypeName: Word
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - com.microsoft.word.doc
+              - org.openxmlformats.wordprocessingml.document
+          - CFBundleTypeName: PowerPoint
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - com.microsoft.powerpoint.ppt
+              - org.openxmlformats.presentationml.presentation
+          - CFBundleTypeName: Markdown
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [net.daringfireball.markdown]
+        UISupportsDocumentBrowser: true
