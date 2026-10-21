@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14      # 云端 macOS，自带 Xcode
+    runs-on: macos-15      # 云端 macOS，自带 Xcode 16（匹配 XcodeGen 生成的工程格式）
     steps:
       - name: 拉取代码
         uses: actions/checkout@v4
