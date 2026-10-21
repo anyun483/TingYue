@@ -26,6 +26,7 @@ struct BookShelfView: View {
                 }
             }
             .overlay { if importing { ProgressView("正在解析文档…") } }
+            .background(ImportErrorToast())
             .fileImporter(isPresented: $showPicker, allowedContentTypes: ImportService.pickerTypes,
                           allowsMultipleSelection: false) { result in
                 guard case .success(let urls) = result, let url = urls.first else { return }
@@ -68,7 +69,7 @@ struct BookShelfView: View {
             do {
                 let book = try ImportService.importFile(url)
                 await MainActor.run {
-                    store.addExisting(book)
+                    store.insert(book)
                     importing = false
                 }
             } catch {
@@ -79,6 +80,21 @@ struct BookShelfView: View {
                 }
             }
         }
+    }
+}
+
+/// 外部「用听阅打开」失败时的错误提示桥
+private struct ImportErrorToast: View {
+    @State private var message: String?
+    var body: some View {
+        Group {}
+            .onReceive(NotificationCenter.default.publisher(for: .init("tingyue.importError"))) { note in
+                message = note.userInfo?["message"] as? String
+            }
+            .alert("导入失败", isPresented: .init(get: { message != nil },
+                                             set: { if !$0 { message = nil } })) {
+                Button("好", role: .cancel) {}
+            } message: { Text(message ?? "") }
     }
 }
 

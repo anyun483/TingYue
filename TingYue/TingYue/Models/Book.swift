@@ -58,6 +58,11 @@ final class BookStore: ObservableObject {
         return book
     }
 
+    func insert(_ book: Book) {
+        books.insert(book, at: 0)
+        save()
+    }
+
     func update(_ book: Book) {
         guard let i = books.firstIndex(where: { $0.id == book.id }) else { return }
         books[i] = book
