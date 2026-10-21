@@ -27,7 +27,7 @@ enum BookStorage {
 /// 书架存储：JSON 文件持久化（iOS 16 兼容方案）
 @MainActor
 final class BookStore: ObservableObject {
-    @Published private(set) var books: [Book] = []
+    @Published var books: [Book] = []
     static let shared = BookStore()
 
     private var storeURL: URL {

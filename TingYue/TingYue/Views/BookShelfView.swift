@@ -64,17 +64,19 @@ struct BookShelfView: View {
 
     private func importFile(_ url: URL) {
         importing = true
-        DispatchQueue.global(qos: .userInitiated).async {
-            var error: String?
+        Task.detached {
             do {
                 let book = try ImportService.importFile(url)
-                await MainActor.run { store.addExisting(book) }
+                await MainActor.run {
+                    store.addExisting(book)
+                    importing = false
+                }
             } catch {
-                error = error.localizedDescription
-            }
-            await MainActor.run {
-                if let e = error { importError = e }
-                importing = false
+                let msg = error.localizedDescription
+                await MainActor.run {
+                    importError = msg
+                    importing = false
+                }
             }
         }
     }
