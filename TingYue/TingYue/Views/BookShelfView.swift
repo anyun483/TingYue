@@ -1,10 +1,8 @@
 import SwiftUI
-import SwiftData
 import UniformTypeIdentifiers
 
 struct BookShelfView: View {
-    @Query(sort: \Book.createdAt, order: .reverse) private var books: [Book]
-    @Environment(\.modelContext) private var context
+    @EnvironmentObject private var store: BookStore
     @State private var showPicker = false
     @State private var importError: String?
     @State private var importing = false
@@ -14,26 +12,10 @@ struct BookShelfView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if books.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "books.vertical")
-                            .font(.system(size: 56)).foregroundStyle(.tertiary)
-                        Text("书架空空的，导入一份文档开始吧").foregroundStyle(.secondary)
-                    }
+                if store.books.isEmpty {
+                    emptyView
                 } else {
-                    ScrollView {
-                        LazyVGrid(columns: columns, spacing: 16) {
-                            ForEach(books) { book in
-                                NavigationLink(value: book) { BookCell(book: book) }
-                                    .contextMenu {
-                                        Button(role: .destructive) { delete(book) } label: {
-                                            Label("删除", systemImage: "trash")
-                                        }
-                                    }
-                            }
-                        }
-                        .padding()
-                    }
+                    gridView
                 }
             }
             .navigationTitle("听阅")
@@ -56,22 +38,45 @@ struct BookShelfView: View {
         }
     }
 
-    private func importFile(_ url: URL) {
-        importing = true
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                _ = try ImportService.importFile(url, context: context)
-            } catch {
-                DispatchQueue.main.async { importError = error.localizedDescription }
-            }
-            DispatchQueue.main.async { importing = false }
+    private var emptyView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "books.vertical")
+                .font(.system(size: 56)).foregroundStyle(.tertiary)
+            Text("书架空空的，导入一份文档开始吧").foregroundStyle(.secondary)
         }
     }
 
-    private func delete(_ book: Book) {
-        try? FileManager.default.removeItem(at: book.textURL)
-        context.delete(book)
-        try? context.save()
+    private var gridView: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 16) {
+                ForEach(store.books) { book in
+                    NavigationLink(value: book) { BookCell(book: book) }
+                        .contextMenu {
+                            Button(role: .destructive) { store.delete(book) } label: {
+                                Label("删除", systemImage: "trash")
+                            }
+                        }
+                }
+            }
+            .padding()
+        }
+    }
+
+    private func importFile(_ url: URL) {
+        importing = true
+        DispatchQueue.global(qos: .userInitiated).async {
+            var error: String?
+            do {
+                let book = try ImportService.importFile(url)
+                await MainActor.run { store.addExisting(book) }
+            } catch {
+                error = error.localizedDescription
+            }
+            await MainActor.run {
+                if let e = error { importError = e }
+                importing = false
+            }
+        }
     }
 }
 

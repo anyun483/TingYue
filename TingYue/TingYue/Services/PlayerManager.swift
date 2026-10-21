@@ -19,7 +19,6 @@ final class PlayerManager: NSObject, ObservableObject {
     @Published var autoStopDate: Date?         // 定时关闭
     @Published var bookTitle: String = ""
 
-    private var book: Book?
     private var audioPlayer: AVAudioPlayer?
     private let synthesizer = AVSpeechSynthesizer()
     private var nextTimer: Timer?
@@ -37,9 +36,11 @@ final class PlayerManager: NSObject, ObservableObject {
         ) { [weak self] _ in self?.checkAutoStop() }
     }
 
+    private var currentBook: Book?
+
     // MARK: - 开始朗读
     func startReading(book: Book, text: String, fromIndex: Int = 0) {
-        self.book = book
+        self.currentBook = book
         self.bookTitle = book.title
         self.sentences = ParserService.splitSentences(text)
         self.currentIndex = fromIndex
@@ -133,12 +134,15 @@ final class PlayerManager: NSObject, ObservableObject {
     }
 
     private func saveProgress() {
-        guard let book = book else { return }
+        guard var book = currentBook else { return }
         let total = sentences.reduce(0) { $0 + $1.count }
         let done = sentences[0..<currentIndex].reduce(0) { $0 + $1.count }
         book.charIndex = done
         book.progressRatio = total > 0 ? Double(done) / Double(total) : 0
-        try? book.modelContext?.save()
+        currentBook = book
+        Task { @MainActor in
+            BookStore.shared.update(book)
+        }
     }
 
     // MARK: - 后台 & 锁屏

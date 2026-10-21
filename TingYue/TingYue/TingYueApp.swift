@@ -1,18 +1,17 @@
 import SwiftUI
-import SwiftData
 
 @main
 struct TingYueApp: App {
+    @StateObject private var store = BookStore.shared
+
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .environmentObject(store)
                 .onOpenURL { url in
                     // 支持从文件 App / AirDrop / 微信「用其他应用打开」导入
-                    guard let context = try? ModelContext(
-                        ModelContainer(for: Book.self)) else { return }
-                    _ = try? ImportService.importFile(url, context: context)
+                    store.importFromOutside(url)
                 }
         }
-        .modelContainer(for: Book.self)
     }
 }

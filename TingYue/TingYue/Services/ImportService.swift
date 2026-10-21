@@ -1,6 +1,5 @@
 import Foundation
 import SwiftUI
-import SwiftData
 import UniformTypeIdentifiers
 
 /// 文档导入：文件选择器 / 外部「用听阅打开」
@@ -13,8 +12,8 @@ enum ImportService {
          UTType(filenameExtension: "md") ?? .data]
     }
 
-    /// 复制进沙盒 → 解析 → 存纯文本 → 建 Book 模型
-    static func importFile(_ url: URL, context: ModelContext) throws -> Book {
+    /// 复制进沙盒 → 解析 → 存纯文本 → 入库
+    static func importFile(_ url: URL) throws -> Book {
         let secured = url.startAccessingSecurityScopedResource()
         defer { if secured { url.stopAccessingSecurityScopedResource() } }
 
@@ -23,10 +22,22 @@ enum ImportService {
         let dest = BookStorage.booksDir.appendingPathComponent(fileName + ".txt")
         try text.data(using: .utf8)?.write(to: dest, options: .atomic)
 
-        let book = Book(title: title, fileName: fileName,
-                        format: url.pathExtension.lowercased())
-        context.insert(book)
-        try context.save()
-        return book
+        return Book(title: title, fileName: fileName,
+                    format: url.pathExtension.lowercased())
+    }
+}
+
+extension BookStore {
+    /// 外部打开导入入口（onOpenURL）
+    @MainActor
+    func importFromOutside(_ url: URL) {
+        guard let book = try? ImportService.importFile(url) else { return }
+        addExisting(book)
+    }
+
+    @MainActor
+    func addExisting(_ book: Book) {
+        books.insert(book, at: 0)
+        save()
     }
 }

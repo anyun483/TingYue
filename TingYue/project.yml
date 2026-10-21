@@ -2,7 +2,7 @@ name: TingYue
 options:
   bundleIdPrefix: com.anyun
   deploymentTarget:
-    iOS: "17.0"   # SwiftData 需要 iOS 17+
+    iOS: "16.0"   # 兼容老机型（数据层已从 SwiftData 换为 JSON 存储）
   createIntermediateGroups: true
 
 packages:
